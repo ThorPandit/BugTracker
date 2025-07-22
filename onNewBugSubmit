@@ -1,0 +1,88 @@
+function onNewBugSubmit(e) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Bugs");
+
+  const [
+    timestamp,
+    title,
+    description,
+    priority,
+    assignedTo,
+    loggedBy,
+    nicFirmware,
+    moduleFirmware,
+    projectCode
+  ] = e.values;
+
+  Logger.log("Form values: " + e.values.length);
+  e.values.forEach((v, i) => Logger.log(`[${i}]: ${v}`));
+
+  const bugId = "BUG-" + Date.now();
+
+  sheet.appendRow([
+    bugId,               // A: Bug ID
+    projectCode,         // B: Project Code
+    title,               // C: Title
+    description,         // D: Description
+    nicFirmware,         // E: NIC Firmware Version
+    moduleFirmware,      // F: Module Firmware Version
+    assignedTo,          // G: Assigned To
+    priority,            // H: Priority
+    loggedBy,            // I: Logged By
+    new Date(),          // J: Bug Logged On
+    "Open",              // K: Bug Status
+    "", "", ""           // L-N: Update status, date, by
+  ]);
+
+  const subject = `🚨 New Bug Assigned: ${title}`;
+  const trackerLink = "https://docs.google.com/spreadsheets/d/1cI8j_vrqGNQtRL-F_QuAHwTjL2f8bCmD66OvLfCO-DA/edit#gid=0";
+
+  const body = `Hello ${assignedTo},
+
+A new bug has been assigned to you.
+
+🆔 Bug ID: ${bugId}
+📌 Project Code: ${projectCode}
+📝 Title: ${title}
+🔧 NIC Firmware Version: ${nicFirmware}
+🔌 Module Firmware Version: ${moduleFirmware}
+🗒️ Description: ${description}
+🚦 Priority: ${priority}
+👤 Logged By: ${loggedBy}
+
+Please update the status in the bug tracker:
+🔗 ${trackerLink}
+
+Regards,  
+Bug Tracker System`;
+
+  try {
+    MailApp.sendEmail({
+      to: assignedTo,
+      subject: subject,
+      body: body
+    });
+    Logger.log("✅ Email sent to: " + assignedTo);
+  } catch (error) {
+    Logger.log("❌ Email failed: " + error.message);
+  }
+}
+
+
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu("Bug Manager")
+    .addItem("Generate Report", "generateBugReport")
+    .addItem("Update Bug Status Now", "updateBugStatus")
+    .addToUi();
+}
+
+function generateBugReport() {
+  const ss = SpreadsheetApp.getActive();
+  const bugs = ss.getSheetByName("Bugs").getDataRange().getValues();
+  const reportName = "Bug Report " + new Date().toISOString().slice(0, 10);
+
+  const reportSheet = ss.insertSheet(reportName);
+  reportSheet.getRange(1, 1, bugs.length, bugs[0].length).setValues(bugs);
+
+  SpreadsheetApp.getUi().alert("✅ Bug report generated: " + reportName);
+}
